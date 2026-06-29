@@ -51,3 +51,11 @@ El script Python responde exactamente como lo haría un receptor FR24 físico:
 
 ## Créditos y Agradecimientos
 * SkyDronex - DoverKan
+
+## Licencia
+
+Este proyecto se distribuye bajo la licencia **Creative Commons Atribución-NoComercial 4.0 Internacional (CC BY-NC 4.0)**.
+
+Eres libre de utilizar, modificar y distribuir este código para simulaciones o fines educativos, siempre y cuando **hagas referencia a la autoría original** (SkyDronex - DoverKan) y **no utilices el proyecto ni sus derivados con fines comerciales**. 
+
+Consulta el archivo `LICENSE` para más detalles.
