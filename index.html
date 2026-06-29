@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>FlightRadar24 Feeder</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: "Segoe UI", Arial, sans-serif;
+      font-size: 13px;
+      background: #f0f2f5;
+      color: #1e2530;
+      min-height: 100vh;
+    }
+
+    /* ── Top bar ── */
+    header {
+      background: #ffffff;
+      border-bottom: 2px solid #ff6600;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 20px;
+      height: 52px;
+      box-shadow: 0 1px 4px rgba(0,0,0,.08);
+    }
+    header .logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 18px;
+      font-weight: 700;
+      color: #ff6600;
+      letter-spacing: 0.5px;
+    }
+    header .logo svg { width: 28px; height: 28px; }
+    header nav a {
+      color: #6b7280;
+      text-decoration: none;
+      margin-left: 24px;
+      font-size: 13px;
+      transition: color .2s;
+    }
+    header nav a:hover, header nav a.active { color: #ff6600; }
+
+    /* ── Layout ── */
+    .page { max-width: 1100px; margin: 0 auto; padding: 24px 16px; }
+
+    h2 {
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: #ff6600;
+      margin-bottom: 0;
+    }
+
+    /* ── Cards ── */
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 12px;
+      margin-bottom: 24px;
+    }
+    .card {
+      background: #ffffff;
+      border: 1px solid #e2e6ed;
+      border-radius: 8px;
+      padding: 14px 18px;
+      box-shadow: 0 1px 3px rgba(0,0,0,.06);
+    }
+    .card .label {
+      font-size: 11px;
+      color: #9ca3af;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      margin-bottom: 6px;
+    }
+    .card .value {
+      font-size: 22px;
+      font-weight: 700;
+      color: #1e2530;
+    }
+
+    /* ── Status badge ── */
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 3px 10px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+    .badge.ok   { background: #dcfce7; color: #15803d; border: 1px solid #86efac; }
+    .badge.err  { background: #fee2e2; color: #dc2626; border: 1px solid #fca5a5; }
+    .badge.warn { background: #fef9c3; color: #b45309; border: 1px solid #fde68a; }
+    .dot { width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
+
+    /* ── Section box ── */
+    .box {
+      background: #ffffff;
+      border: 1px solid #e2e6ed;
+      border-radius: 8px;
+      margin-bottom: 24px;
+      overflow: hidden;
+      box-shadow: 0 1px 3px rgba(0,0,0,.06);
+    }
+    .box-header {
+      background: #f8f9fb;
+      padding: 10px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid #e2e6ed;
+    }
+    .box-header h2 { margin: 0; }
+
+    /* ── Info grid ── */
+    .info-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0;
+    }
+    .info-row { display: contents; }
+    .info-row > * {
+      padding: 8px 16px;
+      border-bottom: 1px solid #f0f2f5;
+    }
+    .info-key   { color: #6b7280; }
+    .info-value { color: #1e2530; font-family: monospace; }
+
+    /* ── Aircraft table ── */
+    .tbl-wrap { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; }
+    th {
+      background: #f8f9fb;
+      color: #6b7280;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      padding: 9px 12px;
+      text-align: left;
+      border-bottom: 1px solid #e2e6ed;
+      white-space: nowrap;
+    }
+    td {
+      padding: 7px 12px;
+      border-bottom: 1px solid #f0f2f5;
+      font-family: monospace;
+      font-size: 12px;
+      white-space: nowrap;
+      color: #374151;
+    }
+    tr:hover td { background: #f5f7ff; }
+    .icao  { color: #c2410c; font-weight: 600; }
+    .call  { color: #1d4ed8; font-weight: 600; }
+    .alt   { color: #15803d; }
+    .speed { color: #b45309; }
+    .route { color: #6b7280; }
+
+    /* ── Footer ── */
+    footer {
+      text-align: center;
+      padding: 20px;
+      color: #c0c7d0;
+      font-size: 11px;
+    }
+
+    /* ── Refresh indicator ── */
+    #refresh-ts { font-size: 11px; color: #9ca3af; }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <svg viewBox="0 0 24 24" fill="#ff6600">
+      <path d="M21 16v-2l-8-5V3.5A1.5 1.5 0 0 0 11.5 2a1.5 1.5 0 0 0-1.5 1.5V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5z"/>
+    </svg>
+    FR24 Feeder
+  </div>
+  <nav>
+    <a href="index.html" class="active">Status</a>
+    <a href="settings.html">Settings</a>
+  </nav>
+</header>
+
+<div class="page">
+
+  <!-- stat cards -->
+  <div class="cards">
+    <div class="card">
+      <div class="label">Feed Status</div>
+      <div id="feed-status"><span class="badge warn"><span class="dot"></span>Loading…</span></div>
+    </div>
+    <div class="card">
+      <div class="label">Aircraft Tracked</div>
+      <div class="value" id="ac-count">—</div>
+    </div>
+    <div class="card">
+      <div class="label">Messages</div>
+      <div class="value" id="num-messages">—</div>
+    </div>
+    <div class="card">
+      <div class="label">Feed Alias</div>
+      <div class="value" id="feed-alias" style="font-size:16px">—</div>
+    </div>
+    <div class="card">
+      <div class="label">Connected Since</div>
+      <div class="value" id="connected-since" style="font-size:13px;padding-top:4px">—</div>
+    </div>
+    <div class="card">
+      <div class="label">Timing</div>
+      <div id="timing-badge"><span class="badge warn"><span class="dot"></span>—</span></div>
+    </div>
+  </div>
+
+  <!-- feeder info -->
+  <div class="box">
+    <div class="box-header">
+      <h2>Feeder Info</h2>
+      <span id="refresh-ts"></span>
+    </div>
+    <div class="info-grid">
+      <div class="info-row">
+        <span class="info-key">Version</span>
+        <span class="info-value" id="ver-build">—</span>
+      </div>
+      <div class="info-row">
+        <span class="info-key">Build revision</span>
+        <span class="info-value" id="ver-revision">—</span>
+      </div>
+      <div class="info-row">
+        <span class="info-key">Receiver</span>
+        <span class="info-value" id="cfg-receiver">—</span>
+      </div>
+      <div class="info-row">
+        <span class="info-key">Feed alias</span>
+        <span class="info-value" id="info-alias">—</span>
+      </div>
+      <div class="info-row">
+        <span class="info-key">Cloud server</span>
+        <span class="info-value" id="cloud-srv">—</span>
+      </div>
+      <div class="info-row">
+        <span class="info-key">Feed mode</span>
+        <span class="info-value" id="feed-mode">—</span>
+      </div>
+      <div class="info-row">
+        <span class="info-key">MLAT</span>
+        <span class="info-value" id="mlat-ok">—</span>
+      </div>
+      <div class="info-row">
+        <span class="info-key">Timing source</span>
+        <span class="info-value" id="timing-src">—</span>
+      </div>
+      <div class="info-row">
+        <span class="info-key">Last RX connect</span>
+        <span class="info-value" id="last-rx">—</span>
+      </div>
+      <div class="info-row">
+        <span class="info-key">Local IP(s)</span>
+        <span class="info-value" id="local-ips">—</span>
+      </div>
+      <div class="info-row">
+        <span class="info-key">Timestamp source</span>
+        <span class="info-value" id="ts-source">—</span>
+      </div>
+      <div class="info-row">
+        <span class="info-key">RX connected</span>
+        <span class="info-value" id="rx-connected">—</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- aircraft table -->
+  <div class="box">
+    <div class="box-header">
+      <h2>Aircraft in Range</h2>
+      <span id="ac-badge" class="badge ok" style="display:none"></span>
+    </div>
+    <div class="tbl-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>ICAO</th>
+            <th>Callsign</th>
+            <th>Type</th>
+            <th>Reg</th>
+            <th>From</th>
+            <th>To</th>
+            <th>Alt (ft)</th>
+            <th>Spd (kts)</th>
+            <th>Hdg</th>
+            <th>Lat</th>
+            <th>Lon</th>
+            <th>Squawk</th>
+          </tr>
+        </thead>
+        <tbody id="ac-tbody">
+          <tr><td colspan="12" style="text-align:center;color:#9ca3af;padding:20px">Loading…</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+<footer>FlightRadar24 Feeder Simulator &mdash; 192.168.1.48:8754</footer>
+
+<script>
+  function fmt(n) { return Number(n).toLocaleString(); }
+
+  function mkBadge(text, cls) {
+    return `<span class="badge ${cls}"><span class="dot"></span>${text}</span>`;
+  }
+
+  async function refreshMonitor() {
+    try {
+      const r = await fetch('/monitor.json');
+      const d = await r.json();
+
+      // Feed status card
+      const status = d.feed_status ?? 'unknown';
+      document.getElementById('feed-status').innerHTML =
+        status === 'connected' ? mkBadge('Connected', 'ok') : mkBadge('Disconnected', 'err');
+
+      // Timing card
+      const timingOk = d.timing_last_result === 'success';
+      document.getElementById('timing-badge').innerHTML =
+        timingOk ? mkBadge('OK', 'ok') : mkBadge(d.timing_last_result ?? '—', 'warn');
+
+      // Stat cards
+      document.getElementById('num-messages').textContent    = fmt(d.num_messages ?? 0);
+      document.getElementById('feed-alias').textContent      = d.feed_alias              ?? '—';
+      document.getElementById('connected-since').textContent = d.last_rx_connect_time_s  ?? '—';
+
+      // Info grid
+      document.getElementById('ver-build').textContent    = d.build_version          ?? '—';
+      document.getElementById('ver-revision').textContent = d.build_revision         ?? '—';
+      document.getElementById('cfg-receiver').textContent =
+        `${d.cfg_receiver ?? '—'}  @  ${d.cfg_host ?? '—'}`;
+      document.getElementById('info-alias').textContent   = d.feed_alias             ?? '—';
+      document.getElementById('cloud-srv').textContent    = d.feed_current_server    ?? '—';
+      document.getElementById('feed-mode').textContent    = d.feed_current_mode      ?? '—';
+      document.getElementById('mlat-ok').textContent      = d['mlat-ok']             ?? '—';
+      document.getElementById('timing-src').textContent   = d.timing_source          ?? '—';
+      document.getElementById('last-rx').textContent      =
+        `${d.last_rx_connect_time_s ?? '—'}  [${d.last_rx_connect_status ?? '—'}]`;
+      document.getElementById('local-ips').textContent    = d.local_ips              ?? '—';
+      document.getElementById('ts-source').textContent    = d.timestamp_source       ?? '—';
+      document.getElementById('rx-connected').textContent = d.rx_connected === '1' ? 'Yes' : 'No';
+
+      document.getElementById('refresh-ts').textContent =
+        'Updated ' + new Date().toLocaleTimeString();
+    } catch (e) {
+      document.getElementById('feed-status').innerHTML =
+        mkBadge('Unreachable', 'err');
+    }
+  }
+
+  async function refreshFlights() {
+    try {
+      const r = await fetch('/flights.json');
+      const d = await r.json();
+
+      const skip = new Set(['full_count', 'version']);
+      const rows = Object.entries(d).filter(([k]) => !skip.has(k));
+
+      document.getElementById('ac-count').textContent = rows.length;
+
+      const badge = document.getElementById('ac-badge');
+      badge.style.display = '';
+      badge.textContent = rows.length + ' aircraft';
+
+      const tbody = document.getElementById('ac-tbody');
+      if (rows.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="12" style="text-align:center;color:#9ca3af;padding:20px">No aircraft</td></tr>';
+        return;
+      }
+
+      rows.sort((a, b) => (b[1][4] ?? 0) - (a[1][4] ?? 0));
+
+      tbody.innerHTML = rows.map(([icao, v]) => `
+        <tr>
+          <td class="icao">${v[0]}</td>
+          <td class="call">${v[16] || v[13] || '—'}</td>
+          <td>${v[8] || '—'}</td>
+          <td>${v[9] || '—'}</td>
+          <td class="route">${v[11] || '—'}</td>
+          <td class="route">${v[12] || '—'}</td>
+          <td class="alt">${fmt(v[4])}</td>
+          <td class="speed">${v[5]}</td>
+          <td>${v[3]}&deg;</td>
+          <td>${v[1].toFixed(4)}</td>
+          <td>${v[2].toFixed(4)}</td>
+          <td>${v[6] || '—'}</td>
+        </tr>`).join('');
+    } catch (e) {
+      document.getElementById('ac-tbody').innerHTML =
+        '<tr><td colspan="12" style="text-align:center;color:#dc2626;padding:20px">Error fetching flights</td></tr>';
+    }
+  }
+
+  function refresh() { refreshMonitor(); refreshFlights(); }
+  refresh();
+  setInterval(refresh, 5000);
+</script>
+</body>
+</html>

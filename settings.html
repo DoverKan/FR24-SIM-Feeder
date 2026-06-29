@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>FlightRadar24 Feeder — Settings</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: "Segoe UI", Arial, sans-serif;
+      font-size: 13px;
+      background: #f0f2f5;
+      color: #1e2530;
+      min-height: 100vh;
+    }
+
+    header {
+      background: #ffffff;
+      border-bottom: 2px solid #ff6600;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 20px;
+      height: 52px;
+      box-shadow: 0 1px 4px rgba(0,0,0,.08);
+    }
+    header .logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 18px;
+      font-weight: 700;
+      color: #ff6600;
+    }
+    header .logo svg { width: 28px; height: 28px; }
+    header nav a {
+      color: #6b7280;
+      text-decoration: none;
+      margin-left: 24px;
+      font-size: 13px;
+      transition: color .2s;
+    }
+    header nav a:hover, header nav a.active { color: #ff6600; }
+
+    .page { max-width: 800px; margin: 0 auto; padding: 24px 16px; }
+
+    h2 {
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: #ff6600;
+      margin-bottom: 0;
+    }
+
+    .box {
+      background: #ffffff;
+      border: 1px solid #e2e6ed;
+      border-radius: 8px;
+      margin-bottom: 24px;
+      overflow: hidden;
+      box-shadow: 0 1px 3px rgba(0,0,0,.06);
+    }
+    .box-header {
+      background: #f8f9fb;
+      padding: 10px 16px;
+      border-bottom: 1px solid #e2e6ed;
+    }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: 220px 1fr;
+      align-items: center;
+      gap: 0;
+    }
+    .form-row { display: contents; }
+    .form-row > * {
+      padding: 10px 16px;
+      border-bottom: 1px solid #f0f2f5;
+    }
+    .form-row:last-child > * { border-bottom: none; }
+    .form-label {
+      color: #374151;
+      line-height: 1.4;
+    }
+    .form-label small {
+      display: block;
+      font-size: 11px;
+      color: #9ca3af;
+      margin-top: 2px;
+    }
+
+    input[type="text"],
+    input[type="number"],
+    input[type="password"],
+    select {
+      width: 100%;
+      max-width: 340px;
+      background: #f8f9fb;
+      border: 1px solid #d1d5db;
+      border-radius: 4px;
+      color: #1e2530;
+      padding: 6px 10px;
+      font-size: 13px;
+      font-family: monospace;
+      outline: none;
+      transition: border-color .2s, box-shadow .2s;
+    }
+    input:focus, select:focus {
+      border-color: #ff6600;
+      box-shadow: 0 0 0 3px rgba(255,102,0,.12);
+    }
+    input[readonly] {
+      background: #f0f2f5;
+      color: #9ca3af;
+      cursor: default;
+    }
+
+    input[type="checkbox"] {
+      width: 16px; height: 16px;
+      accent-color: #ff6600;
+      cursor: pointer;
+    }
+
+    .toggle-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .toggle-row label { color: #374151; }
+
+    .actions {
+      padding: 14px 16px;
+      display: flex;
+      gap: 10px;
+      background: #f8f9fb;
+      border-top: 1px solid #e2e6ed;
+    }
+
+    button {
+      padding: 8px 20px;
+      border-radius: 4px;
+      border: none;
+      font-size: 13px;
+      cursor: pointer;
+      font-family: inherit;
+      transition: background .2s, box-shadow .2s;
+    }
+    .btn-primary {
+      background: #ff6600;
+      color: #fff;
+      font-weight: 600;
+    }
+    .btn-primary:hover { background: #e05500; }
+    .btn-secondary {
+      background: #e5e7eb;
+      color: #374151;
+      border: 1px solid #d1d5db;
+    }
+    .btn-secondary:hover { background: #d1d5db; }
+    .btn-danger {
+      background: #fff;
+      color: #dc2626;
+      border: 1px solid #fca5a5;
+    }
+    .btn-danger:hover { background: #fee2e2; }
+
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      border-radius: 6px;
+      padding: 10px 20px;
+      font-size: 13px;
+      opacity: 0;
+      transform: translateY(10px);
+      transition: opacity .3s, transform .3s;
+      pointer-events: none;
+      z-index: 999;
+      box-shadow: 0 4px 12px rgba(0,0,0,.12);
+    }
+    .toast.show { opacity: 1; transform: translateY(0); }
+
+    footer {
+      text-align: center;
+      padding: 20px;
+      color: #c0c7d0;
+      font-size: 11px;
+    }
+
+    .section-note {
+      padding: 10px 16px;
+      font-size: 11px;
+      color: #9ca3af;
+      background: #f8f9fb;
+      border-top: 1px solid #f0f2f5;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <svg viewBox="0 0 24 24" fill="#ff6600">
+      <path d="M21 16v-2l-8-5V3.5A1.5 1.5 0 0 0 11.5 2a1.5 1.5 0 0 0-1.5 1.5V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5z"/>
+    </svg>
+    FR24 Feeder
+  </div>
+  <nav>
+    <a href="index.html">Status</a>
+    <a href="settings.html" class="active">Settings</a>
+  </nav>
+</header>
+
+<div class="page">
+
+  <!-- Receiver -->
+  <div class="box">
+    <div class="box-header"><h2>Receiver</h2></div>
+    <div class="form-grid">
+      <div class="form-row">
+        <div class="form-label">
+          Receiver type
+          <small>Data source for ADS-B messages</small>
+        </div>
+        <div>
+          <select id="rx-type">
+            <option value="dvbt" selected>DVB-T (RTL-SDR)</option>
+            <option value="beast">Beast / Mode-S Beast</option>
+            <option value="avr">AVR / Kinetic SBS</option>
+            <option value="sbs">SBS / Basestation</option>
+            <option value="none">None (MLAT only)</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-label">
+          Host / IP
+          <small>dump1090 or receiver host</small>
+        </div>
+        <div><input type="text" id="rx-host" value="localhost"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-label">
+          Port
+          <small>TCP port for raw data</small>
+        </div>
+        <div><input type="number" id="rx-port" value="30005" min="1" max="65535"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-label">
+          Raw output port
+          <small>Local port for raw Beast output</small>
+        </div>
+        <div><input type="number" id="rx-raw-port" value="30334" min="1" max="65535"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Location -->
+  <div class="box">
+    <div class="box-header"><h2>Radar Location</h2></div>
+    <div class="form-grid">
+      <div class="form-row">
+        <div class="form-label">
+          Latitude
+          <small>Decimal degrees (e.g. 40.41650)</small>
+        </div>
+        <div><input type="text" id="loc-lat" value="40.41650"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-label">
+          Longitude
+          <small>Decimal degrees (e.g. -3.70035)</small>
+        </div>
+        <div><input type="text" id="loc-lon" value="-3.70035"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-label">
+          Altitude (m)
+          <small>Antenna altitude above sea level</small>
+        </div>
+        <div><input type="number" id="loc-alt" value="667"></div>
+      </div>
+    </div>
+    <div class="section-note">
+      Location is used for MLAT synchronisation and range calculations.
+      After changing, a feeder restart is required.
+    </div>
+  </div>
+
+  <!-- Network / Feed -->
+  <div class="box">
+    <div class="box-header"><h2>Feed</h2></div>
+    <div class="form-grid">
+      <div class="form-row">
+        <div class="form-label">
+          Sharing key
+          <small>Your unique feeder identifier</small>
+        </div>
+        <div><input type="password" id="sharing-key" value="••••••••••••••••••••••••••••••"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-label">
+          FR24 feed server
+          <small>Cloud upload endpoint</small>
+        </div>
+        <div><input type="text" id="feed-server" value="feed.flightradar24.com" readonly></div>
+      </div>
+      <div class="form-row">
+        <div class="form-label">
+          Feed port
+          <small>TCP port used for cloud feed</small>
+        </div>
+        <div><input type="number" id="feed-port" value="10001" readonly></div>
+      </div>
+      <div class="form-row">
+        <div class="form-label">
+          MLAT
+          <small>Participate in multilateration network</small>
+        </div>
+        <div class="toggle-row">
+          <input type="checkbox" id="mlat-enabled" checked>
+          <label for="mlat-enabled">Enable MLAT</label>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-label">
+          Upstream range filter
+          <small>Only send aircraft within this range (nm, 0 = all)</small>
+        </div>
+        <div><input type="number" id="range-filter" value="0" min="0" max="400"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Interface -->
+  <div class="box">
+    <div class="box-header"><h2>Web Interface</h2></div>
+    <div class="form-grid">
+      <div class="form-row">
+        <div class="form-label">
+          Listen address
+          <small>IP address for this web UI</small>
+        </div>
+        <div><input type="text" id="web-host" value="192.168.1.48"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-label">
+          Listen port
+        </div>
+        <div><input type="number" id="web-port" value="8754" min="1" max="65535"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-label">
+          Refresh interval
+          <small>Status page auto-refresh (seconds)</small>
+        </div>
+        <div><input type="number" id="refresh-interval" value="5" min="1" max="60"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Logging -->
+  <div class="box">
+    <div class="box-header"><h2>Logging</h2></div>
+    <div class="form-grid">
+      <div class="form-row">
+        <div class="form-label">Log level</div>
+        <div>
+          <select id="log-level">
+            <option>ERROR</option>
+            <option selected>WARNING</option>
+            <option>INFO</option>
+            <option>DEBUG</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-label">
+          Log to file
+        </div>
+        <div class="toggle-row">
+          <input type="checkbox" id="log-file">
+          <label for="log-file">Save log to /var/log/fr24feed.log</label>
+        </div>
+      </div>
+    </div>
+    <div class="actions">
+      <button class="btn-primary" onclick="saveSettings()">Save settings</button>
+      <button class="btn-secondary" onclick="restoreDefaults()">Restore defaults</button>
+      <button class="btn-danger" onclick="restartFeeder()" style="margin-left:auto">Restart feeder</button>
+    </div>
+  </div>
+
+</div>
+
+<footer>FlightRadar24 Feeder Simulator &mdash; 192.168.1.48:8754</footer>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  function showToast(msg, type) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    if (type === 'err') {
+      t.style.background  = '#fee2e2';
+      t.style.color       = '#dc2626';
+      t.style.border      = '1px solid #fca5a5';
+    } else {
+      t.style.background  = '#dcfce7';
+      t.style.color       = '#15803d';
+      t.style.border      = '1px solid #86efac';
+    }
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 3000);
+  }
+
+  function saveSettings() {
+    // In a real feeder this would POST to the backend.
+    // Here we just persist to localStorage for demo purposes.
+    const cfg = {
+      rxType:          document.getElementById('rx-type').value,
+      rxHost:          document.getElementById('rx-host').value,
+      rxPort:          document.getElementById('rx-port').value,
+      rxRawPort:       document.getElementById('rx-raw-port').value,
+      lat:             document.getElementById('loc-lat').value,
+      lon:             document.getElementById('loc-lon').value,
+      alt:             document.getElementById('loc-alt').value,
+      mlatEnabled:     document.getElementById('mlat-enabled').checked,
+      rangeFilter:     document.getElementById('range-filter').value,
+      webHost:         document.getElementById('web-host').value,
+      webPort:         document.getElementById('web-port').value,
+      refreshInterval: document.getElementById('refresh-interval').value,
+      logLevel:        document.getElementById('log-level').value,
+      logFile:         document.getElementById('log-file').checked,
+    };
+    localStorage.setItem('fr24sim_settings', JSON.stringify(cfg));
+    showToast('Settings saved. Restart feeder to apply changes.');
+  }
+
+  function restoreDefaults() {
+    localStorage.removeItem('fr24sim_settings');
+    location.reload();
+  }
+
+  function restartFeeder() {
+    if (!confirm('Restart the feeder process? The feed will be interrupted briefly.')) return;
+    showToast('Restart command sent…');
+    setTimeout(() => showToast('Feeder restarted successfully.'), 2000);
+  }
+
+  // Load saved settings on page open
+  (function loadSettings() {
+    const raw = localStorage.getItem('fr24sim_settings');
+    if (!raw) return;
+    try {
+      const cfg = JSON.parse(raw);
+      if (cfg.rxType)     document.getElementById('rx-type').value = cfg.rxType;
+      if (cfg.rxHost)     document.getElementById('rx-host').value = cfg.rxHost;
+      if (cfg.rxPort)     document.getElementById('rx-port').value = cfg.rxPort;
+      if (cfg.rxRawPort)  document.getElementById('rx-raw-port').value = cfg.rxRawPort;
+      if (cfg.lat)        document.getElementById('loc-lat').value = cfg.lat;
+      if (cfg.lon)        document.getElementById('loc-lon').value = cfg.lon;
+      if (cfg.alt)        document.getElementById('loc-alt').value = cfg.alt;
+      if (cfg.mlatEnabled !== undefined)
+                          document.getElementById('mlat-enabled').checked = cfg.mlatEnabled;
+      if (cfg.rangeFilter !== undefined)
+                          document.getElementById('range-filter').value = cfg.rangeFilter;
+      if (cfg.webHost)    document.getElementById('web-host').value = cfg.webHost;
+      if (cfg.webPort)    document.getElementById('web-port').value = cfg.webPort;
+      if (cfg.refreshInterval)
+                          document.getElementById('refresh-interval').value = cfg.refreshInterval;
+      if (cfg.logLevel)   document.getElementById('log-level').value = cfg.logLevel;
+      if (cfg.logFile !== undefined)
+                          document.getElementById('log-file').checked = cfg.logFile;
+    } catch(_) {}
+  })();
+</script>
+</body>
+</html>
